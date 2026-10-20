@@ -54,6 +54,11 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.apt.app.data.AptViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import com.apt.app.ui.PreviewPhone
+import com.apt.app.ui.main.MainScreen
+import com.apt.app.ui.main.Tab
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.data.Memory
 import com.apt.app.data.MemoryKind
 import com.apt.app.ui.components.AptCard
@@ -281,3 +286,7 @@ private fun AddMemorySheet(vm: AptViewModel, onDismiss: () -> Unit) {
     }
 }
 
+// Vista previa para el panel Split/Design (datos de ejemplo; las fotos de internet no cargan).
+@Preview(name = "Recuerdos", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun MemoriesScreenPreview() = AptTheme { MainScreen(AptViewModel(linked = true), Tab.Recuerdos) }

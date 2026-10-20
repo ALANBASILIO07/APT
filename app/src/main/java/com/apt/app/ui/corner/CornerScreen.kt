@@ -52,6 +52,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.apt.app.data.AptViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import com.apt.app.ui.PreviewPhone
+import com.apt.app.ui.main.MainScreen
+import com.apt.app.ui.main.Tab
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.data.CornerItem
 import com.apt.app.data.CornerKind
 import com.apt.app.ui.components.AptCard
@@ -289,3 +294,8 @@ private fun ComposeSheet(kind: CornerKind, partner: String, onDismiss: () -> Uni
         }
     }
 }
+
+// Vista previa para el panel Split/Design (datos de ejemplo; las fotos de internet no cargan).
+@Preview(name = "Rincón", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun CornerScreenPreview() = AptTheme { MainScreen(AptViewModel(linked = true), Tab.Rincon) }

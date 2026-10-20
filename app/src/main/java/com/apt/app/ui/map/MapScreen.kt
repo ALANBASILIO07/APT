@@ -53,6 +53,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apt.app.data.AptViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import com.apt.app.ui.PreviewPhone
+import com.apt.app.ui.main.MainScreen
+import com.apt.app.ui.main.Tab
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.data.Place
 import com.apt.app.data.PlaceStatus
 import com.apt.app.ui.components.AptCard
@@ -335,3 +340,8 @@ private fun AddPlaceDialog(onDismiss: () -> Unit, onSave: (String, String, Int, 
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TintaSuave) } },
     )
 }
+
+// Vista previa para el panel Split/Design (datos de ejemplo; las fotos de internet no cargan).
+@Preview(name = "Mapa", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun MapScreenPreview() = AptTheme { MainScreen(AptViewModel(linked = true), Tab.Mapa) }

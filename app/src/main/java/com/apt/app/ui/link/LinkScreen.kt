@@ -43,6 +43,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apt.app.data.AptViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import com.apt.app.ui.PreviewPhone
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.ui.components.FloatingHearts
 import com.apt.app.ui.components.Monogram
 import com.apt.app.ui.components.OroRosaBrush
@@ -245,3 +248,16 @@ private fun NameField(label: String, value: String, onChange: (String) -> Unit, 
         )
     }
 }
+
+// Vistas previas para el panel Split/Design, una por paso.
+@Preview(name = "1 · Bienvenida", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun WelcomePreview() = AptTheme { LinkScreen(AptViewModel()) }
+
+@Preview(name = "2 · Código", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun CodePreview() = AptTheme { LinkScreen(AptViewModel(), initialStep = 1) }
+
+@Preview(name = "3 · Juntos desde", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun SincePreview() = AptTheme { LinkScreen(AptViewModel(), initialStep = 2) }

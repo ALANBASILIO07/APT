@@ -36,6 +36,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apt.app.data.AptViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import com.apt.app.ui.PreviewPhone
+import com.apt.app.ui.main.MainScreen
+import com.apt.app.ui.main.Tab
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.data.Memory
 import com.apt.app.data.MemoryKind
 import com.apt.app.ui.components.AptCard
@@ -153,3 +158,8 @@ private fun CollagePreview(photos: List<Memory>, caption: String, onCaption: (St
         OutlinePill("Volver a elegir", onBack)
     }
 }
+
+// Vista previa para el panel Split/Design (datos de ejemplo; las fotos de internet no cargan).
+@Preview(name = "Collage", device = PreviewPhone, showSystemUi = true)
+@Composable
+private fun CollageScreenPreview() = AptTheme { MainScreen(AptViewModel(linked = true), Tab.Collage) }
