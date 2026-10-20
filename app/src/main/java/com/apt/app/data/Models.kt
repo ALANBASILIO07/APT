@@ -11,56 +11,66 @@ data class Profile(
     val partner: String = "Paulina",
     val nickForPartner: String = "mi luna",
     val nickForMe: String = "osito",
-    val avisoNotas: Boolean = true,
-    val avisoRecuerdos: Boolean = true,
-    val avisoAniversarios: Boolean = true,
+    val nextPlaceId: String? = "lis",
     val coverPhoto: String? = null,
+    val avisoNuevos: Boolean = true,
+    val avisoAniversarios: Boolean = true,
+    val avisoVoz: Boolean = true,
+    val avisoUnDiaComoHoy: Boolean = false,
 )
 
-enum class PlaceStatus { PorVisitar, Visitado }
-
-/** x e y son posiciones relativas (0..1) dentro del mapa ilustrado. */
+/** Lugar en el mapa mundial; date es el mes en que lo visitaron, p. ej. "ABR 2024". */
 data class Place(
-    val id: Long,
+    val id: String,
     val name: String,
-    val region: String,
-    val km: Int,
-    val x: Float,
-    val y: Float,
-    val status: PlaceStatus,
-    val note: String = "",
+    val lon: Double,
+    val lat: Double,
+    val visited: Boolean = false,
+    val date: String = "",
 )
 
-enum class MemoryKind(val label: String) { Foto("Foto"), Video("Video"), Audio("Audio"), Nota("Nota") }
+enum class MemoryKind(val label: String) { Foto("FOTO"), Video("VIDEO"), Audio("AUDIO"), Nota("NOTA") }
 
+/**
+ * Un recuerdo de un lugar. Para fotos y videos uri es la imagen o el archivo;
+ * para audio es la grabación; para notas, label es el texto de la nota.
+ */
 data class Memory(
     val id: Long,
-    val title: String,
-    val date: LocalDate,
-    val place: String,
+    val placeId: String,
     val kind: MemoryKind,
+    val label: String,
+    val msg: String,
+    val by: String,
+    val date: LocalDate,
     val uri: String? = null,
-    val text: String = "",
+    val secs: Int = 0,
 )
 
-enum class CornerKind(val label: String) {
-    Nota("Notas"), Poema("Poemas"), Musica("Música"), Idea("Ideas"), Voz("Voz")
-}
+/** Una lectura en voz alta de un poema; sin uri es de ejemplo. */
+data class Recitation(val by: String, val secs: Int, val uri: String? = null)
 
-data class CornerItem(
+data class Poem(
     val id: Long,
-    val kind: CornerKind,
-    val author: String,
+    val title: String,
     val text: String,
-    val extra: String = "",
-    val date: LocalDate = LocalDate.now(),
-    val done: Boolean = false,
-    val uri: String? = null,
+    val by: String,
+    val date: LocalDate,
+    val audios: List<Recitation> = emptyList(),
 )
+
+data class Song(val title: String, val artist: String, val by: String)
+
+data class Idea(val id: Long, val text: String, val by: String, val done: Boolean = false)
+
+enum class Destino { Mapa, Recuerdos, Collage, Rincon, Nosotros }
 
 data class Notice(
     val id: Long,
+    val who: String,
     val text: String,
     val time: String,
-    val read: Boolean = false,
+    val img: String? = null,
+    val go: Destino = Destino.Recuerdos,
+    val unread: Boolean = true,
 )

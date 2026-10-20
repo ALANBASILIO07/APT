@@ -8,12 +8,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.apt.app.R
 
-// El diseño usa Satoshi; mientras no esté en res/font usamos Manrope (apt_sans_*).
-// Para cambiarla basta con reemplazar los cuatro archivos apt_sans_*.ttf.
+// Satoshi (Fontshare, ITF Free Font License) en 400, 500 y 700; el 600 del diseño usa la 700.
 val Sans = FontFamily(
     Font(R.font.apt_sans_regular, FontWeight.Normal),
     Font(R.font.apt_sans_medium, FontWeight.Medium),
-    Font(R.font.apt_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.apt_sans_bold, FontWeight.SemiBold),
     Font(R.font.apt_sans_bold, FontWeight.Bold),
 )
 
@@ -27,15 +26,15 @@ val Mono = FontFamily(
 )
 
 object AptText {
-    val marca = TextStyle(fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, letterSpacing = 4.sp)
-    val titulo = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 17.sp, letterSpacing = 2.5.sp)
-    val etiqueta = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 1.6.sp)
-    val cuerpo = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp)
+    /** Etiqueta en mayúsculas sobre cada sección: 12 px, 0.12em. */
+    val etiqueta = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, letterSpacing = 1.44.sp)
+    /** Título de pantalla: 19 px, 500, mayúsculas espaciadas 0.08em. */
+    val titulo = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 19.sp, letterSpacing = 1.5.sp, lineHeight = 24.sp)
+    val cuerpo = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 21.sp)
     val pequeno = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
-    val boton = TextStyle(fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, letterSpacing = 2.sp)
-    val mono = TextStyle(fontFamily = Mono, fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 1.sp)
-    val script = TextStyle(fontFamily = Script, fontSize = 30.sp, lineHeight = 38.sp)
-    val scriptPequena = TextStyle(fontFamily = Script, fontSize = 22.sp, lineHeight = 30.sp)
+    val boton = TextStyle(fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+    val mono = TextStyle(fontFamily = Mono, fontWeight = FontWeight.Normal, fontSize = 12.sp, letterSpacing = (-0.24).sp)
+    val script = TextStyle(fontFamily = Script, fontSize = 30.sp, lineHeight = 35.sp)
 }
 
 private val base = Typography()

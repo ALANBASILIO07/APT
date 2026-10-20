@@ -5,25 +5,44 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import java.text.NumberFormat
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.roundToInt
+
+private val esMX = Locale("es", "MX")
 
 /** Sin store (vistas previas) todo vive en memoria con los datos de ejemplo. */
 class AptViewModel(private val store: AptStore? = null, linked: Boolean = false) : ViewModel() {
 
-    var profile by mutableStateOf(store?.loadProfile() ?: Profile(linked = linked, myCode = "K7P2QX"))
+    var profile by mutableStateOf(store?.loadProfile() ?: Profile(linked = linked, myCode = "AP-2814", partnerCode = "AP-0525"))
         private set
 
     val places = mutableStateListOf<Place>().apply { addAll(store?.loadPlaces() ?: SampleData.places) }
     val memories = mutableStateListOf<Memory>().apply { addAll(store?.loadMemories() ?: SampleData.memories) }
-    val corner = mutableStateListOf<CornerItem>().apply { addAll(store?.loadCorner() ?: SampleData.corner) }
+    val poems = mutableStateListOf<Poem>().apply { addAll(store?.loadPoems() ?: SampleData.poems) }
+    val ideas = mutableStateListOf<Idea>().apply { addAll(store?.loadIdeas() ?: SampleData.ideas) }
     val notices = mutableStateListOf<Notice>().apply { addAll(store?.loadNotices() ?: SampleData.notices) }
+    val songs = SampleData.songs
 
-    val daysTogether: Long
-        get() = ChronoUnit.DAYS.between(profile.since, LocalDate.now()).coerceAtLeast(0)
+    /** Mensaje breve que aparece arriba de la pantalla y se va solo. */
+    data class Toast(val id: Long, val msg: String)
 
-    val unreadNotices: Int
-        get() = notices.count { !it.read }
+    var toast by mutableStateOf<Toast?>(null)
+        private set
+
+    fun showToast(msg: String) {
+        toast = Toast(System.nanoTime(), msg)
+    }
+
+    fun clearToast(t: Toast) {
+        if (toast == t) toast = null
+    }
 
     private fun newId() = System.currentTimeMillis()
 
@@ -32,75 +51,134 @@ class AptViewModel(private val store: AptStore? = null, linked: Boolean = false)
         store?.saveProfile(profile)
     }
 
+    // Fechas
+
+    val daysTogether: Long
+        get() = ChronoUnit.DAYS.between(profile.since, LocalDate.now()).coerceAtLeast(0)
+
+    val daysLabel: String
+        get() = NumberFormat.getIntegerInstance(esMX).format(daysTogether)
+
+    /** "Cumplen 32 meses juntos en 12 días" o "Su aniversario de 3 años es en 12 días". */
+    val anniversaryText: String
+        get() {
+            val since = profile.since
+            val today = LocalDate.now()
+            fun onDay(d: LocalDate) = d.withDayOfMonth(minOf(since.dayOfMonth, d.lengthOfMonth()))
+            var next = onDay(today)
+            if (!next.isAfter(today)) next = onDay(today.plusMonths(1))
+            val toNext = ChronoUnit.DAYS.between(today, next)
+            val months = (next.year - since.year) * 12 + next.monthValue - since.monthValue
+            return if (months > 0 && months % 12 == 0) "Su aniversario de ${months / 12} años es en $toNext días"
+            else "Cumplen $months meses juntos en $toNext días"
+        }
+
+    var showAlert by mutableStateOf(true)
+
+    val unreadNotices: Int
+        get() = notices.count { it.unread }
+
     init {
         if (profile.myCode.isEmpty()) {
-            val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-            val code = (1..6).map { alphabet.random() }.joinToString("")
+            val code = "AP-" + (1000..9999).random()
             updateProfile { it.copy(myCode = code) }
         }
     }
 
-    fun link(partnerCode: String, since: LocalDate, me: String, partner: String) = updateProfile {
-        it.copy(linked = true, partnerCode = partnerCode.uppercase(), since = since, me = me, partner = partner)
+    // Vinculación
+
+    fun link(partnerCode: String, since: LocalDate) = updateProfile {
+        it.copy(linked = true, partnerCode = partnerCode.uppercase(), since = since)
     }
 
     fun unlink() = updateProfile { it.copy(linked = false, partnerCode = "") }
 
     // Mapa
-    fun addPlace(name: String, region: String, km: Int, x: Float, y: Float, note: String) {
-        places.add(Place(newId(), name, region, km, x, y, PlaceStatus.PorVisitar, note))
+
+    val visited: List<Place> get() = places.filter { it.visited }
+    val wishes: List<Place> get() = places.filter { !it.visited }
+
+    val nextPlace: Place?
+        get() = places.firstOrNull { it.id == profile.nextPlaceId && !it.visited } ?: wishes.firstOrNull()
+
+    /** Distancia aproximada desde el último lugar visitado, como en el prototipo. */
+    val nextKmLabel: String
+        get() {
+            val last = visited.lastOrNull() ?: return ""
+            val next = nextPlace ?: return ""
+            val km = (hypot((next.lon - last.lon) * cos((next.lat + last.lat) / 2 * PI / 180), next.lat - last.lat) * 111).roundToInt()
+            return "≈ ${NumberFormat.getIntegerInstance(Locale("es")).format(km)} KM"
+        }
+
+    fun setNext(id: String) = updateProfile { it.copy(nextPlaceId = id) }
+
+    fun addPlace(p: Place) {
+        if (places.any { it.id == p.id }) return
+        places.add(p)
         store?.savePlaces(places)
+        showToast("${p.name} agregado al mapa")
     }
 
-    fun toggleVisited(id: Long) {
-        val i = places.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return
-        val p = places[i]
-        places[i] = p.copy(status = if (p.status == PlaceStatus.Visitado) PlaceStatus.PorVisitar else PlaceStatus.Visitado)
+    fun markVisited(id: String) {
+        val p = places.firstOrNull { it.id == id } ?: return
+        val month = LocalDate.now().format(DateTimeFormatter.ofPattern("MMM yyyy", esMX)).uppercase(esMX).replace(".", "")
+        places.remove(p)
+        places.add(p.copy(visited = true, date = month))
         store?.savePlaces(places)
-    }
-
-    fun removePlace(id: Long) {
-        places.removeAll { it.id == id }
-        store?.savePlaces(places)
+        if (profile.nextPlaceId == id) updateProfile { it.copy(nextPlaceId = wishes.firstOrNull()?.id) }
+        showToast("¡Visitaron ${p.name}!")
     }
 
     // Recuerdos
-    fun addMemory(title: String, place: String, date: LocalDate, kind: MemoryKind, uri: String?, text: String) {
-        memories.add(0, Memory(newId(), title, date, place, kind, uri, text))
+
+    fun memoriesOf(placeId: String) = memories.filter { it.placeId == placeId }
+
+    fun addMemories(items: List<Memory>) {
+        memories.addAll(items)
         store?.saveMemories(memories)
-        notify("Guardaste un recuerdo: $title")
+        val place = places.firstOrNull { it.id == items.firstOrNull()?.placeId }?.name.orEmpty()
+        showToast(if (items.size > 1) "${items.size} recuerdos en $place" else "Recuerdo en $place")
     }
 
-    fun removeMemory(id: Long) {
-        memories.removeAll { it.id == id }
-        store?.saveMemories(memories)
-    }
+    fun newMemoryId() = newId()
 
     // Rincón
-    fun addCorner(kind: CornerKind, text: String, extra: String = "", uri: String? = null) {
-        corner.add(0, CornerItem(newId(), kind, profile.me, text, extra, LocalDate.now(), uri = uri))
-        store?.saveCorner(corner)
+
+    fun addPoem(title: String, text: String) {
+        poems.add(Poem(newId(), title, text, profile.me, LocalDate.now()))
+        store?.savePoems(poems)
+        showToast("Poema guardado")
+    }
+
+    fun addRecitation(poemId: Long, secs: Int, uri: String?) {
+        val i = poems.indexOfFirst { it.id == poemId }.takeIf { it >= 0 } ?: return
+        poems[i] = poems[i].copy(audios = poems[i].audios + Recitation(profile.me, secs.coerceAtLeast(1), uri))
+        store?.savePoems(poems)
+        showToast("Tu voz quedó guardada")
     }
 
     fun toggleIdea(id: Long) {
-        val i = corner.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return
-        corner[i] = corner[i].copy(done = !corner[i].done)
-        store?.saveCorner(corner)
+        val i = ideas.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return
+        ideas[i] = ideas[i].copy(done = !ideas[i].done)
+        store?.saveIdeas(ideas)
     }
 
-    fun removeCorner(id: Long) {
-        corner.removeAll { it.id == id }
-        store?.saveCorner(corner)
+    fun addIdea(text: String) {
+        if (text.isBlank()) return
+        ideas.add(Idea(newId(), text.trim(), profile.me.uppercase(esMX)))
+        store?.saveIdeas(ideas)
     }
 
     // Avisos
-    fun markNoticesRead() {
-        for (i in notices.indices) notices[i] = notices[i].copy(read = true)
+
+    fun readNotice(id: Long) {
+        val i = notices.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return
+        notices[i] = notices[i].copy(unread = false)
         store?.saveNotices(notices)
     }
 
-    private fun notify(text: String) {
-        notices.add(0, Notice(newId(), text, "ahora"))
+    fun readAllNotices() {
+        for (i in notices.indices) notices[i] = notices[i].copy(unread = false)
         store?.saveNotices(notices)
     }
 }

@@ -15,71 +15,59 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apt.app.data.AptViewModel
-import androidx.compose.ui.tooling.preview.Preview
-import com.apt.app.ui.PreviewPhone
-import com.apt.app.ui.main.MainScreen
-import com.apt.app.ui.main.Tab
-import com.apt.app.ui.theme.AptTheme
 import com.apt.app.data.SampleData
+import com.apt.app.ui.PreviewPhone
 import com.apt.app.ui.components.AptPhoto
 import com.apt.app.ui.components.CardShape
-import com.apt.app.ui.components.LabeledField
-import com.apt.app.ui.components.OutlinePill
-import com.apt.app.ui.components.PillShape
-import com.apt.app.ui.components.SectionLabel
-import com.apt.app.ui.components.formatDays
+import com.apt.app.ui.components.Divider
+import com.apt.app.ui.components.Eyebrow
+import com.apt.app.ui.components.GhostButton
+import com.apt.app.ui.components.PillField
+import com.apt.app.ui.components.PillValue
+import com.apt.app.ui.components.SinceDatePicker
+import com.apt.app.ui.components.SwitchRow
+import com.apt.app.ui.main.MainScreen
+import com.apt.app.ui.main.Tab
 import com.apt.app.ui.theme.AptText
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.ui.theme.Ciruela
-import com.apt.app.ui.theme.Crema
 import com.apt.app.ui.theme.Linea
-import com.apt.app.ui.theme.OroRosa
 import com.apt.app.ui.theme.Tinta
 import com.apt.app.ui.theme.TintaSuave
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun UsScreen(vm: AptViewModel) {
     val context = LocalContext.current
     val p = vm.profile
-    var picking by remember { mutableStateOf(false) }
+    var picking by rememberSaveable { mutableStateOf(false) }
 
     val pickCover = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
@@ -88,161 +76,99 @@ fun UsScreen(vm: AptViewModel) {
         }
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-    ) {
-        // Portada con nombres en cursiva
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Box(
             Modifier
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp)
                 .fillMaxWidth()
-                .height(230.dp)
+                .heightIn(min = 260.dp)
                 .clip(CardShape)
-                .clickable { pickCover.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-                .semantics { contentDescription = "Foto de portada de ${p.me} y ${p.partner}. Toca para cambiarla" },
+                .clickable(role = Role.Button) { pickCover.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                .semantics { contentDescription = "Foto de ${p.me} y ${p.partner}. Toca para cambiarla" },
+            contentAlignment = Alignment.BottomCenter,
         ) {
-            AptPhoto(p.coverPhoto ?: SampleData.COVER, "", Modifier.fillMaxSize())
-            Box(Modifier.fillMaxSize().background(Tinta.copy(alpha = 0.25f)))
-            Column(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("${p.me} & ${p.partner}", style = AptText.script.copy(fontSize = 36.sp), color = Crema, textAlign = TextAlign.Center)
-                Text("${formatDays(vm.daysTogether)} DÍAS JUNTOS", style = AptText.mono, color = Crema)
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-        SectionLabel("Juntos desde")
-        Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(PillShape)
-                .border(1.dp, Linea, PillShape)
-                .background(Color.White.copy(alpha = 0.6f))
-                .clickable(role = Role.Button) { picking = true }
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                p.since.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")),
-                style = AptText.mono.copy(fontSize = 15.sp),
-                color = Tinta,
-                modifier = Modifier.weight(1f),
+            AptPhoto(p.coverPhoto ?: SampleData.COVER, "", Modifier.matchParentSize())
+            Box(
+                Modifier.matchParentSize().background(
+                    Brush.verticalGradient(0.3f to Color(0x00140C16), 1f to Color(0xC7140C16))
+                )
             )
-            Icon(Icons.Outlined.CalendarMonth, contentDescription = "Cambiar fecha", tint = Tinta)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        SectionLabel("Apodos")
-        Spacer(Modifier.height(10.dp))
-        LabeledField(
-            "${p.me} le dice a ${p.partner}", p.nickForPartner,
-            { v -> vm.updateProfile { it.copy(nickForPartner = v) } },
-            textStyle = AptText.scriptPequena,
-        )
-        Spacer(Modifier.height(12.dp))
-        LabeledField(
-            "${p.partner} le dice a ${p.me}", p.nickForMe,
-            { v -> vm.updateProfile { it.copy(nickForMe = v) } },
-            textStyle = AptText.scriptPequena,
-        )
-
-        Spacer(Modifier.height(24.dp))
-        SectionLabel("Avisos")
-        Spacer(Modifier.height(4.dp))
-        NoticeToggle("Notas y poemas nuevos", p.avisoNotas) { v -> vm.updateProfile { it.copy(avisoNotas = v) } }
-        NoticeToggle("Recuerdos de hace un año", p.avisoRecuerdos) { v -> vm.updateProfile { it.copy(avisoRecuerdos = v) } }
-        NoticeToggle("Aniversarios y fechas", p.avisoAniversarios) { v -> vm.updateProfile { it.copy(avisoAniversarios = v) } }
-
-        Spacer(Modifier.height(24.dp))
-        SectionLabel("Vinculación")
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Tu código", style = AptText.pequeno, color = TintaSuave)
-                Text(p.myCode, style = AptText.mono.copy(fontSize = 15.sp), color = Tinta)
-            }
-            Column(Modifier.weight(1f)) {
-                Text("Código de ${p.partner}", style = AptText.pequeno, color = TintaSuave)
-                Text(p.partnerCode, style = AptText.mono.copy(fontSize = 15.sp), color = Tinta)
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${p.me} & ${p.partner}", style = AptText.script.copy(fontSize = 38.sp, lineHeight = 42.sp), color = Color.White)
+                Text(
+                    "${vm.daysLabel} DÍAS JUNTOS",
+                    style = AptText.mono,
+                    color = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.padding(top = 6.dp),
+                )
             }
         }
-        Spacer(Modifier.height(16.dp))
-        OutlinePill("Desvincular", { vm.unlink() }, Modifier.fillMaxWidth())
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Hecho por ${p.me} & ${p.partner}",
-            style = AptText.pequeno, color = TintaSuave,
-            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(16.dp))
+
+        Section("Juntos desde") {
+            PillValue(p.since.toString(), "Fecha en que se hicieron novios", { picking = true }, Modifier.padding(top = 10.dp))
+        }
+
+        Section("Apodos") {
+            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                NickField("${p.me} le dice a ${p.partner}", p.nickForPartner) { v -> vm.updateProfile { it.copy(nickForPartner = v) } }
+                NickField("${p.partner} le dice a ${p.me}", p.nickForMe) { v -> vm.updateProfile { it.copy(nickForMe = v) } }
+            }
+        }
+
+        Section("Avisos") {
+            Column(Modifier.padding(top = 6.dp)) {
+                SwitchRow("Nuevos recuerdos de mi pareja", p.avisoNuevos) { vm.updateProfile { it.copy(avisoNuevos = !it.avisoNuevos) } }
+                Divider()
+                SwitchRow("Aniversarios y mesiversarios", p.avisoAniversarios) { vm.updateProfile { it.copy(avisoAniversarios = !it.avisoAniversarios) } }
+                Divider()
+                SwitchRow("Notas de voz y poemas", p.avisoVoz) { vm.updateProfile { it.copy(avisoVoz = !it.avisoVoz) } }
+                Divider()
+                SwitchRow("“Un día como hoy”", p.avisoUnDiaComoHoy) { vm.updateProfile { it.copy(avisoUnDiaComoHoy = !it.avisoUnDiaComoHoy) } }
+                Divider()
+            }
+        }
+
+        Section("Cuenta vinculada", bottom = 28.dp) {
+            Row(
+                Modifier
+                    .padding(top = 12.dp)
+                    .fillMaxWidth()
+                    .border(1.dp, Linea, CardShape)
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(Ciruela))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("${p.partner.lowercase(Locale("es"))}@apt", style = AptText.cuerpo.copy(fontWeight = FontWeight.SemiBold), color = Tinta)
+                    Text("${p.myCode} ↔ ${p.partnerCode.ifEmpty { "—" }}", style = AptText.mono, color = TintaSuave)
+                }
+                GhostButton("Desvincular", { vm.unlink() }, height = 44.dp, fontSize = 13.sp)
+            }
+        }
     }
 
     if (picking) {
-        SinceDatePicker(p.since, onDismiss = { picking = false }) { d ->
+        SinceDatePicker(p.since, onDismiss = { picking = false }, onPick = { d ->
             vm.updateProfile { it.copy(since = d) }
             picking = false
-        }
+        })
     }
 }
 
 @Composable
-private fun NoticeToggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Column {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(label, style = AptText.cuerpo, color = Tinta, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(12.dp))
-            Switch(
-                checked = checked,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Crema,
-                    checkedTrackColor = Ciruela,
-                    uncheckedThumbColor = OroRosa,
-                    uncheckedTrackColor = Crema,
-                    uncheckedBorderColor = Linea,
-                ),
-            )
-        }
-        HorizontalDivider(color = Linea)
+private fun Section(title: String, bottom: androidx.compose.ui.unit.Dp = 0.dp, content: @Composable () -> Unit) {
+    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = bottom)) {
+        Eyebrow(title)
+        content()
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SinceDatePicker(initial: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initial.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
-            }) { Text("Listo", color = Ciruela) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TintaSuave) } },
-        colors = DatePickerDefaults.colors(containerColor = Crema),
-    ) {
-        DatePicker(
-            state = state,
-            colors = DatePickerDefaults.colors(
-                containerColor = Crema,
-                selectedDayContainerColor = Ciruela,
-                todayDateBorderColor = Ciruela,
-                todayContentColor = Ciruela,
-            ),
-        )
+private fun NickField(label: String, value: String, onChange: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = AptText.pequeno, color = TintaSuave)
+        PillField(value, onChange, label, Modifier.fillMaxWidth(), textStyle = AptText.script.copy(fontSize = 26.sp, lineHeight = 30.sp), height = 50.dp)
     }
 }
 

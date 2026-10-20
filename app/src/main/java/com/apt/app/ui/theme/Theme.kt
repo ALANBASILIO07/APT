@@ -24,16 +24,16 @@ private val AtardecerColors = lightColorScheme(
     onBackground = Tinta,
     surface = Crema,
     onSurface = Tinta,
-    surfaceVariant = CremaProfunda,
+    surfaceVariant = Superficie,
     onSurfaceVariant = TintaSuave,
     surfaceContainerLowest = Crema,
     surfaceContainerLow = Crema,
     surfaceContainer = Crema,
     surfaceContainerHigh = Crema,
-    surfaceContainerHighest = CremaProfunda,
+    surfaceContainerHighest = Superficie,
     outline = Linea,
     outlineVariant = Linea,
-    error = AvisoSinLeer,
+    error = Insignia,
 )
 
 // Radio 14 en tarjetas, píldora en controles, sin sombras
@@ -41,7 +41,7 @@ private val AtardecerShapes = Shapes(
     small = RoundedCornerShape(14.dp),
     medium = RoundedCornerShape(14.dp),
     large = RoundedCornerShape(14.dp),
-    extraLarge = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(14.dp),
 )
 
 @Composable

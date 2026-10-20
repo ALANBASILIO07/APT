@@ -1,29 +1,26 @@
 package com.apt.app.ui.collage
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,130 +29,176 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apt.app.data.AptViewModel
-import androidx.compose.ui.tooling.preview.Preview
+import com.apt.app.data.MemoryKind
+import com.apt.app.data.SampleData
 import com.apt.app.ui.PreviewPhone
+import com.apt.app.ui.components.AptPhoto
+import com.apt.app.ui.components.CardShape
+import com.apt.app.ui.components.PillButton
+import com.apt.app.ui.components.PillField
+import com.apt.app.ui.components.ScreenHeader
 import com.apt.app.ui.main.MainScreen
 import com.apt.app.ui.main.Tab
-import com.apt.app.ui.theme.AptTheme
-import com.apt.app.data.Memory
-import com.apt.app.data.MemoryKind
-import com.apt.app.ui.components.AptCard
-import com.apt.app.ui.components.AptPhoto
-import com.apt.app.ui.components.FilledPill
-import com.apt.app.ui.components.LabeledField
-import com.apt.app.ui.components.OutlinePill
-import com.apt.app.ui.components.ScreenTitle
 import com.apt.app.ui.theme.AptText
+import com.apt.app.ui.theme.AptTheme
 import com.apt.app.ui.theme.Ciruela
 import com.apt.app.ui.theme.Crema
+import com.apt.app.ui.theme.Linea
+import com.apt.app.ui.theme.Superficie
 import com.apt.app.ui.theme.TintaSuave
 
-private const val MAX = 6
+/** Diseños de página: dos columnas, una grande arriba con dos abajo, o cuadrícula de cuatro. */
+private enum class Layout(val slots: Int, val label: String) { Dos(2, "Dos fotos"), Tres(3, "Tres fotos"), Cuatro(4, "Cuatro fotos") }
 
 @Composable
 fun CollageScreen(vm: AptViewModel) {
-    val photos = vm.memories.filter { it.kind == MemoryKind.Foto }
-    var selected by rememberSaveable { mutableStateOf(listOf<Long>()) }
-    var composing by rememberSaveable { mutableStateOf(false) }
+    // Fotos disponibles: las de sus recuerdos; si aún no hay, las de ejemplo
+    val pool = vm.memories.filter { it.kind == MemoryKind.Foto && it.uri != null }.mapNotNull { it.uri }.distinct()
+        .ifEmpty { SampleData.ROLL }
+    var layout by rememberSaveable { mutableStateOf(Layout.Tres) }
+    var slots by rememberSaveable { mutableStateOf(listOf(5, 9, 6, 1)) }
     var caption by rememberSaveable { mutableStateOf("nuestro año") }
+    var saved by rememberSaveable { mutableStateOf(false) }
 
-    if (composing) {
-        CollagePreview(
-            photos = selected.mapNotNull { id -> photos.firstOrNull { it.id == id } },
-            caption = caption,
-            onCaption = { caption = it },
-            onBack = { composing = false },
-        )
-        return
+    fun cycle(k: Int) {
+        slots = slots.toMutableList().also { it[k] = ((if (it[k] < 0) -1 else it[k]) + 1) % pool.size }
+        saved = false
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Column(Modifier.padding(vertical = 12.dp)) {
-                ScreenTitle("Collage")
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (selected.isEmpty()) "Elige hasta $MAX fotos para armar un collage."
-                    else "${selected.size} de $MAX elegidas",
-                    style = AptText.pequeno, color = TintaSuave,
-                )
-                if (selected.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        FilledPill("Crear collage", { composing = true })
-                        TextButton(onClick = { selected = emptyList() }) { Text("Limpiar", color = TintaSuave) }
-                    }
-                }
-            }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        ScreenHeader("Crear collage", "Arma una página de nuestro álbum")
+        Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Layout.entries.forEach { l -> LayoutButton(l, l == layout) { layout = l } }
         }
-        items(photos, key = { it.id }) { m ->
-            val index = selected.indexOf(m.id)
-            val isOn = index >= 0
-            Box(
-                Modifier
-                    .aspectRatio(1f)
-                    .toggleable(value = isOn, role = Role.Checkbox) { on ->
-                        selected = if (on && selected.size < MAX) selected + m.id else selected - m.id
-                    }
-            ) {
-                AptPhoto(m.uri, m.title, Modifier.fillMaxSize())
-                if (isOn) {
-                    Box(Modifier.fillMaxSize().border(3.dp, Ciruela))
-                    Box(
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(Ciruela),
-                        contentAlignment = Alignment.Center,
-                    ) { Text("${index + 1}", style = AptText.mono.copy(fontSize = 11.sp), color = Crema) }
-                }
+
+        Box(
+            Modifier
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp)
+                .fillMaxWidth()
+                .aspectRatio(4f / 5f)
+                .clip(CardShape)
+                .background(Superficie)
+                .border(1.dp, Linea, CardShape)
+                .padding(8.dp)
+        ) {
+            val slot: @Composable (Int, Modifier) -> Unit = { k, m ->
+                val img = slots[k].takeIf { it >= 0 }?.let { pool[it % pool.size] }
+                PhotoSlot(img, m) { cycle(k) }
             }
+            Grid(layout, slot)
+            Text(
+                caption,
+                style = AptText.script.copy(
+                    fontSize = 40.sp, lineHeight = 44.sp, color = Color.White,
+                    shadow = Shadow(Color(0x73000000), Offset(0f, 2f), 28f),
+                ),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 14.dp),
+            )
+        }
+        Text(
+            "Toca cada espacio para cambiar la foto.",
+            style = AptText.pequeno.copy(fontSize = 12.sp),
+            color = TintaSuave,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp),
+        )
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            PillField(caption, { caption = it; saved = false }, "Dedicatoria del collage", Modifier.fillMaxWidth(), placeholder = "Escribe una dedicatoria")
+            PillButton(
+                if (saved) "Guardado en recuerdos ✓" else "Guardar en recuerdos",
+                { saved = true; vm.showToast("Collage guardado") },
+                Modifier.fillMaxWidth(),
+            )
         }
     }
 }
 
 @Composable
-private fun CollagePreview(photos: List<Memory>, caption: String, onCaption: (String) -> Unit, onBack: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+private fun Grid(layout: Layout, slot: @Composable (Int, Modifier) -> Unit) {
+    val gap = Arrangement.spacedBy(8.dp)
+    @Composable
+    fun RowScope.cell(k: Int) = slot(k, Modifier.weight(1f).fillMaxHeight())
+    when (layout) {
+        Layout.Dos -> Row(Modifier.fillMaxSize(), horizontalArrangement = gap) { cell(0); cell(1) }
+        Layout.Tres -> Column(Modifier.fillMaxSize(), verticalArrangement = gap) {
+            Row(Modifier.weight(1.3f).fillMaxWidth()) { cell(0) }
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = gap) { cell(1); cell(2) }
+        }
+        Layout.Cuatro -> Column(Modifier.fillMaxSize(), verticalArrangement = gap) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = gap) { cell(0); cell(1) }
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = gap) { cell(2); cell(3) }
+        }
+    }
+}
+
+@Composable
+private fun PhotoSlot(img: String?, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier
+            .background(Crema)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = "Cambiar foto de este espacio" },
+        contentAlignment = Alignment.Center,
     ) {
-        ScreenTitle("Tu collage")
-        AptCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Primera foto grande y el resto en filas de dos o tres
-                photos.firstOrNull()?.let { AptPhoto(it.uri, it.title, Modifier.fillMaxWidth().aspectRatio(16f / 10f)) }
-                photos.drop(1).chunked(if (photos.size - 1 == 4) 2 else 3).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        row.forEach { AptPhoto(it.uri, it.title, Modifier.weight(1f).aspectRatio(1f)) }
+        if (img != null) {
+            AptPhoto(img, "", Modifier.fillMaxSize())
+        } else {
+            Canvas(Modifier.fillMaxSize()) {
+                drawRect(Linea, style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))))
+            }
+            Text("+ foto", style = AptText.mono.copy(fontSize = 11.sp), color = TintaSuave)
+        }
+    }
+}
+
+/** Miniatura del diseño de página. */
+@Composable
+private fun LayoutButton(layout: Layout, selected: Boolean, onClick: () -> Unit) {
+    val color = if (selected) Ciruela else Linea
+    val shape = RoundedCornerShape(10.dp)
+    val cell: @Composable (Modifier) -> Unit = { m -> Box(m.clip(RoundedCornerShape(2.dp)).background(color)) }
+    Box(
+        Modifier
+            .size(52.dp, 62.dp)
+            .clip(shape)
+            .border(1.5.dp, color, shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = layout.label; this.selected = selected }
+            .padding(5.dp)
+    ) {
+        val gap = Arrangement.spacedBy(3.dp)
+        when (layout) {
+            Layout.Dos -> Row(Modifier.fillMaxSize(), horizontalArrangement = gap) {
+                cell(Modifier.weight(1f).fillMaxHeight()); cell(Modifier.weight(1f).fillMaxHeight())
+            }
+            Layout.Tres -> Column(Modifier.fillMaxSize(), verticalArrangement = gap) {
+                cell(Modifier.weight(1.3f).fillMaxWidth())
+                Row(Modifier.weight(1f), horizontalArrangement = gap) {
+                    cell(Modifier.weight(1f).fillMaxHeight()); cell(Modifier.weight(1f).fillMaxHeight())
+                }
+            }
+            Layout.Cuatro -> Column(Modifier.fillMaxSize(), verticalArrangement = gap) {
+                repeat(2) {
+                    Row(Modifier.weight(1f), horizontalArrangement = gap) {
+                        cell(Modifier.weight(1f).fillMaxHeight()); cell(Modifier.weight(1f).fillMaxHeight())
                     }
                 }
-                Text(
-                    caption,
-                    style = AptText.script,
-                    color = Ciruela,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
             }
         }
-        LabeledField("Dedicatoria", caption, onCaption)
-        OutlinePill("Volver a elegir", onBack)
     }
 }
 
